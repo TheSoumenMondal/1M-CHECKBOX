@@ -4,41 +4,211 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
+  <title>1M Checkboxes</title>
+  <style>
+    :root {
+      --ds-background-100: #000000;
+      --ds-gray-200: #333333;
+      --ds-gray-900: #ededed;
+      --ds-blue-700: #0070f3;
+
+      --bg-color: var(--ds-background-100);
+      --border-color: var(--ds-gray-200);
+      --accent-color: var(--ds-gray-900);
+      --check-color: var(--ds-background-100);
+
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: var(--bg-color);
+      color: var(--accent-color);
+      font-family: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overscroll-behavior-y: none;
+      box-sizing: border-box;
+    }
+
+    #container {
+      display: grid;
+
+      grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+      gap: 1px;
+
+      background-color: var(--border-color);
+      border: 1px solid var(--border-color);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+
+      content-visibility: auto;
+    }
+
+    .grid-cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--bg-color);
+      aspect-ratio: 1;
+      width: 100%;
+    }
+
+    .checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background-color: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+      margin: 0;
+      outline: none;
+    }
+
+    .checkbox:hover {
+      border-color: var(--accent-color);
+    }
+
+    .checkbox:focus-visible {
+      box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--accent-color);
+    }
+
+    .checkbox:checked {
+      background-color: var(--accent-color);
+      border-color: var(--accent-color);
+    }
+
+    .checkbox:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 6px;
+      width: 4px;
+      height: 10px;
+      border: solid var(--check-color);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    #sentinel {
+      width: 100%;
+      height: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 40px 0;
+      color: var(--ds-gray-200);
+      font-size: 14px;
+    }
+
+    #progress-indicator {
+      position: fixed;
+      bottom: 24px;
+      background: rgba(23, 23, 23, 0.8);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      color: var(--accent-color);
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      pointer-events: none;
+    }
+  </style>
 </head>
-
-<style>
-  #container {
-    width: 100vw;
-  }
-
-  .checkbox {
-    width: 20px;
-    height: 20px;
-    margin: 5px;
-  }
-</style>
 
 <body>
   <div id="container"></div>
+  <div id="sentinel">Scroll down to load more...</div>
+  <div id="progress-indicator">Loaded: 0</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const container = document.getElementById("container");
+    const indicatorText = document.getElementById("progress-indicator");
+    const sentinel = document.getElementById("sentinel");
+
+    const socket = io();
+
+    let currentIndex = 0;
+    const chunkSize = 3000;
+    let checkboxStates = [];
+    let arrayLength = 0;
+
+
+    window.addEventListener("load", async () => {
+      const response = await fetch("/checkboxes", { method: 'GET' });
+      checkboxStates = await response.json();
+      arrayLength = checkboxStates.length;
+      renderChunk();
+    });
+
+
+    function renderChunk() {
+      if (currentIndex >= arrayLength) {
+        sentinel.style.display = "none";
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      const limit = Math.min(currentIndex + chunkSize, arrayLength);
+
+      for (let i = 0; i < limit - currentIndex; i++) {
+        const index = currentIndex + i;
+        const cell = document.createElement("div");
+        cell.className = "grid-cell";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "checkbox";
+        checkbox.id = `checkbox-${index}`;
+        checkbox.checked = !!checkboxStates[index];
+        checkbox.addEventListener("change", () => {
+          socket.emit("client:state:change", { i: index, state: checkbox.checked });
+          checkboxStates[index] = checkbox.checked;
+        });
+
+        cell.appendChild(checkbox);
+        fragment.appendChild(cell);
+      }
+
+      socket.on("server:state:change", (data) => {
+        checkboxStates[data.i] = data.state;
+        const checkbox = document.getElementById(`checkbox-${data.i}`);
+        if (checkbox) checkbox.checked = data.state;
+      })
+
+      container.appendChild(fragment);
+      currentIndex = limit;
+
+      const percentage = arrayLength ? ((currentIndex / arrayLength) * 100).toFixed(1) : "0.0";
+      indicatorText.textContent = `Loaded: ${currentIndex.toLocaleString()} (${percentage}%)`;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        requestAnimationFrame(() => {
+          renderChunk();
+        });
+      }
+    }, {
+      rootMargin: "1000px"
+    });
+
+    observer.observe(sentinel);
+  </script>
 </body>
-
-<script>
-
-  const ARRAY_LENGTH = 10000
-  const container = document.getElementById("container")
-
-  Array.from({
-    length: ARRAY_LENGTH
-  }).fill(null).forEach(() => {
-    const input = document.createElement("input");
-    input.type = "checkbox"
-    input.className = "checkbox"
-    container.appendChild(input)
-  })
-
-
-
-</script>
 
 </html>
