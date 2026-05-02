@@ -1,0 +1,32 @@
+import * as dotenv from "dotenv";
+import z from "zod";
+import { ApiError } from "../error/api-error.js";
+
+dotenv.config();
+
+const envSchema = z.object({
+	PORT: z
+		.string()
+		.min(0)
+		.max(65535)
+		.transform((val) => parseInt(val, 10)),
+	LOG_LEVEL: z
+		.enum(["error", "warn", "info", "http", "verbose", "debug", "silly"])
+		.default("info"),
+	SERVICE_NAME: z.string().optional(),
+	NODE_ENV: z
+		.enum(["development", "production", "test"])
+		.default("development"),
+});
+
+const getTypedEnv = () => {
+	const parsed = envSchema.safeParse(process.env);
+	if (!parsed.success) {
+		throw ApiError.zodError(parsed.error);
+	}
+	return parsed.data;
+};
+
+const env = getTypedEnv();
+
+export { env };

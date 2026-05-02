@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+
+<style>
+  #container {
+    width: 100vw;
+  }
+
+  .checkbox {
+    width: 20px;
+    height: 20px;
+    margin: 5px;
+  }
+</style>
+
+<body>
+  <div id="container"></div>
+</body>
+
+<script>
+
+  const ARRAY_LENGTH = 10000
+  const container = document.getElementById("container")
+
+  Array.from({
+    length: ARRAY_LENGTH
+  }).fill(null).forEach(() => {
+    const input = document.createElement("input");
+    input.type = "checkbox"
+    input.className = "checkbox"
+    container.appendChild(input)
+  })
+
+
+
+</script>
+
+</html>
