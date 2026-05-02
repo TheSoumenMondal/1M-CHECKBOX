@@ -12,6 +12,12 @@ function initSocketServer(server: http.Server) {
 		logger.info(`New client connected: ${socket.id}`);
 
 		socket.on("client:state:change", async (data) => {
+			const cookies = socket.handshake.headers.cookie
+				? Object.fromEntries(socket.handshake.headers.cookie.split(';').map(c => c.trim().split('=')))
+				: {};
+			if (!cookies.auth_token) {
+				return;
+			}
 			await redisClient.hset("checkbox_state", data.i, String(data.state));
 			io.emit("server:state:change", data);
 		});

@@ -22,6 +22,8 @@ const envSchema = z.object({
 		.string()
 		.transform((val) => parseInt(val, 10))
 		.default(6379),
+	OAUTH_CLIENT_ID: z.string().optional(),
+	OAUTH_CLIENT_SECRET: z.string().optional(),
 });
 
 const getTypedEnv = () => {
