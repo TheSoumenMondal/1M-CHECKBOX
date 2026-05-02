@@ -1,9 +1,10 @@
 import path from "node:path";
 import Express from "express";
 
+import { redisClient } from "./configs/redis.js";
+
 class ExpressApp {
 	private readonly app: Express.Application;
-	public state: boolean[] = Array(1000).fill(false);
 	constructor() {
 		this.app = Express();
 		this.configureMiddlewares();
@@ -18,8 +19,13 @@ class ExpressApp {
 	}
 
 	public getCheckboxes() {
-		this.app.get("/checkboxes", (_req, res) => {
-			res.json(this.state);
+		this.app.get("/checkboxes", async (_req, res) => {
+			const hash = await redisClient.hgetall("checkbox_state");
+			const state = Array(100000).fill(false);
+			for (const [key, value] of Object.entries(hash)) {
+				state[parseInt(key, 10)] = value === "true";
+			}
+			res.json(state);
 		});
 	}
 

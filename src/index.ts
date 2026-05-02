@@ -9,7 +9,7 @@ async function main(): Promise<void> {
 	const app = appInstance.getApp();
 	const server = http.createServer(app);
 	const PORT = +env.PORT;
-	initSocketServer(server, appInstance.state);
+	initSocketServer(server);
 	server.listen(PORT, () => {
 		logger.info(`Server is running on port http://localhost:${PORT}`);
 	});

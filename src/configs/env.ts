@@ -17,6 +17,11 @@ const envSchema = z.object({
 	NODE_ENV: z
 		.enum(["development", "production", "test"])
 		.default("development"),
+	REDIS_HOST: z.string().default("localhost"),
+	REDIS_PORT: z
+		.string()
+		.transform((val) => parseInt(val, 10))
+		.default(6379),
 });
 
 const getTypedEnv = () => {
