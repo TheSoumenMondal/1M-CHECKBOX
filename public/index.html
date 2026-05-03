@@ -176,6 +176,9 @@
     let checkboxStates = [];
     let arrayLength = 0;
 
+    const lastEmitTime = new Map();
+    const RATE_LIMIT_MS = 500;
+
 
     window.addEventListener("load", async () => {
       const response = await fetch("/checkboxes", { method: 'GET' });
@@ -209,6 +212,14 @@
             window.location.href = "/login";
             return;
           }
+
+          const now = Date.now();
+          if (now - (lastEmitTime.get(index) ?? 0) < RATE_LIMIT_MS) {
+            checkbox.checked = !!checkboxStates[index];
+            return;
+          }
+          lastEmitTime.set(index, now);
+
           const cookies = Object.fromEntries(document.cookie.split(';').map(c => c.trim().split('=')));
           let userName = cookies.user_name ? decodeURIComponent(cookies.user_name) : localStorage.getItem("user_name");
           if (!userName || userName === "undefined") userName = "Someone";
